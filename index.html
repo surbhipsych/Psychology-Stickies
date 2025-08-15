@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sticky Note Generator</title>
+  <style>
+    :root {
+      --bg-light: #f9f9f9;
+      --bg-dark: #1e1e2f;
+      --text-light: #000000;
+      --text-dark: #ffffff;
+    }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Poppins', sans-serif;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    body.light {
+      background: var(--bg-light);
+      color: var(--text-light);
+    }
+    body.dark {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+    }
+    h1 {
+      text-align: center;
+      font-size: 2em;
+      text-shadow: 0 0 10px #ff9bd2;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    textarea {
+      width: 100%;
+      max-width: 800px;
+      height: 180px;
+      padding: 15px;
+      border-radius: 10px;
+      border: none;
+      box-shadow: 0 0 10px rgba(255, 105, 180, 0.5);
+      font-size: 16px;
+      font-weight: bold;
+      resize: vertical;
+    }
+    button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 10px;
+      background: #ff9bd2;
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 10px #ff9bd2;
+      transition: transform 0.2s ease;
+    }
+    button:active {
+      transform: scale(0.95);
+    }
+    .board {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+    }
+    .note {
+      width: 250px;
+      min-height: 180px;
+      padding: 30px 20px 20px 20px;
+      border-radius: 20px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+      font-size: 16px;
+      position: relative;
+      overflow-y: auto;
+      word-wrap: break-word;
+      font-weight: bold;
+      background-size: cover;
+      transition: all 0.3s ease;
+    }
+    .note:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(255, 105, 180, 0.6);
+    }
+    .note .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: white;
+      color: black;
+      font-size: 20px;
+      border: none;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      line-height: 1;
+      padding: 0;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #ff9bd2;
+      color: black;
+      padding: 8px 15px;
+      border-radius: 10px;
+      cursor: pointer;
+      z-index: 999;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .slider-container input[type="range"] {
+      accent-color: #ff9bd2;
+    }
+
+    @media screen and (max-width: 768px) {
+      .note {
+        width: 100%;
+      }
+      textarea {
+        width: 100%;
+      }
+      .controls {
+        flex-direction: column;
+        align-items: center;
+      }
+      .theme-toggle {
+        top: 10px;
+        right: 10px;
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body class="light">
+  <div class="theme-toggle" onclick="toggleTheme()">Toggle Mode</div>
+  <h1>🌸 Cute Sticky Note Generator</h1>
+  <div class="controls">
+    <textarea id="noteText" placeholder="Write multiple sticky notes here. Each paragraph becomes a sticky."></textarea>
+
+    <div class="slider-container">
+      <label for="fontSlider">Font Size</label>
+      <input type="range" min="12" max="30" value="16" id="fontSlider" oninput="adjustFontSize(this.value)">
+    </div>
+
+    <button onclick="changeFont()">Change Font</button>
+    <button onclick="generateNotes()">Generate Stickies</button>
+    <button onclick="randomizeStickyColors()">Random Colors</button>
+    <button onclick="saveBoardAsImage()">Save All as PNG</button>
+  </div>
+  <div class="board" id="noteBoard"></div>
+
+  <!-- Dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    let darkMode = false;
+    let fontIndex = 0;
+    let fontSize = 16;
+
+    const colorCombos = [
+      ['#ffe1f2', '#ff9bd2'],
+      ['#d5f3fe', '#9be7ff'],
+      ['#e0ffe1', '#b9fbc0'],
+      ['#fff5ba', '#ffe29a'],
+      ['#e0eaff', '#b5c7ff'],
+      ['#fdf1ff', '#f6bfff'],
+      ['#ffecf0', '#ffd1dc'],
+      ['#e0fff4', '#b9fcd3']
+    ];
+
+    function toggleTheme() {
+      darkMode = !darkMode;
+      document.body.className = darkMode ? 'dark' : 'light';
+    }
+
+    function randomizeStickyColors() {
+      const notes = document.querySelectorAll('.note');
+      notes.forEach(note => {
+        const combo = colorCombos[Math.floor(Math.random() * colorCombos.length)];
+        note.style.background = `linear-gradient(135deg, ${combo[0]}, ${combo[1]})`;
+      });
+    }
+
+    function adjustFontSize(size) {
+      fontSize = parseInt(size);
+      document.querySelectorAll('.note').forEach(note => {
+        note.style.fontSize = fontSize + 'px';
+      });
+    }
+
+    function changeFont() {
+      const fonts = ["Poppins", "Caveat", "Roboto", "Arial"];
+      fontIndex = (fontIndex + 1) % fonts.length;
+      document.querySelectorAll('.note').forEach(note => {
+        note.style.fontFamily = fonts[fontIndex];
+      });
+    }
+
+    function generateNotes() {
+      const input = document.getElementById("noteText").value;
+      const paragraphs = input.split(/\n\s*\n/);
+      const board = document.getElementById("noteBoard");
+      if (paragraphs.length > 100) {
+        alert("Limit: 100 stickies per session!");
+        return;
+      }
+      board.innerHTML = "";
+
+      paragraphs.forEach((p, i) => {
+        if (p.trim() === "") return;
+        const note = document.createElement("div");
+        note.className = "note";
+        note.innerText = p.trim();
+        const combo = colorCombos[i % colorCombos.length];
+        note.style.background = `linear-gradient(135deg, ${combo[0]}, ${combo[1]})`;
+        note.style.color = '#000';
+        note.style.fontFamily = 'Poppins';
+        note.style.fontSize = fontSize + 'px';
+
+        const close = document.createElement("button");
+        close.innerHTML = "&times;";
+        close.className = "close-btn";
+        close.onclick = () => note.remove();
+        note.appendChild(close);
+
+        board.appendChild(note);
+      });
+    }
+
+    function saveBoardAsImage() {
+      const board = document.getElementById("noteBoard");
+      const cloned = board.cloneNode(true);
+      cloned.querySelectorAll('.close-btn').forEach(btn => btn.remove());
+      document.body.appendChild(cloned);
+      html2canvas(cloned).then(canvas => {
+        const link = document.createElement("a");
+        link.download = "all_stickies.png";
+        link.href = canvas.toDataURL();
+        link.click();
+        document.body.removeChild(cloned);
+      });
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat&family=Poppins&family=Roboto&display=swap" rel="stylesheet">
+</body>
+</html>
